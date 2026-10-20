@@ -1,0 +1,4 @@
+This source archive intentionally excludes credentials and runtime data.
+
+Provide database, Stripe, Bitcoin, and BRIDGE_SECRET values through environment variables or deployment-specific configuration before running the app.
+Dependency and build caches (node_modules and .next), logs, uploaded user media, and previous archives are also excluded.

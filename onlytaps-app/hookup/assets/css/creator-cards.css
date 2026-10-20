@@ -1,0 +1,82 @@
+/* Creator/User Card Styles - OnlyFans/Fansly Inspired */
+:root{--bg-dark:#0a0a0f;--bg-card:#1a1a2e;--border:#2d2d44;--blue:#4267f5;--text:#fff;--gray:#a0a0b0;--green:#10b981;--orange:#f59e0b;--red:#ef4444;--cyan:#06b6d4}
+
+/* Profile Header Card */
+.profile-header-card{background:var(--bg-card);border:2px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:2rem}
+.profile-cover{position:relative;width:100%;height:250px;background:linear-gradient(135deg,#4267f5,#1d9bf0);overflow:hidden}
+.profile-cover img,.profile-cover video{width:100%;height:100%;object-fit:cover}
+.profile-stats-bar{position:absolute;top:1rem;left:0;right:0;display:flex;justify-content:center;gap:1.5rem;flex-wrap:wrap;z-index:2}
+.stat-badge{background:rgba(0,0,0,.8);backdrop-filter:blur(10px);padding:.5rem 1rem;border-radius:20px;display:flex;align-items:center;gap:.5rem;color:#fff;font-weight:600;font-size:.9rem}
+.stat-badge i{font-size:1.1rem}
+.profile-main{padding:0 2rem 2rem;position:relative;margin-top:-50px}
+.profile-avatar-wrapper{position:relative;width:120px;height:120px;margin:0 auto 1rem}
+.profile-avatar{width:120px;height:120px;border-radius:50%;border:5px solid var(--bg-card);background:linear-gradient(135deg,#4267f5,#1d9bf0);overflow:hidden;position:relative}
+.profile-avatar img{width:100%;height:100%;object-fit:cover}
+.avatar-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;color:#fff}
+.online-indicator{position:absolute;bottom:8px;right:8px;width:20px;height:20px;background:var(--green);border:3px solid var(--bg-card);border-radius:50%;z-index:2}
+.verification-badge{position:absolute;bottom:0;right:0;background:var(--blue);color:#fff;width:35px;height:35px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid var(--bg-card);font-size:1rem}
+.profile-info{text-align:center;margin-bottom:1.5rem}
+.profile-username{font-size:1.8rem;font-weight:800;color:var(--text);margin-bottom:.25rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.profile-handle{color:var(--gray);font-size:1rem;margin-bottom:.5rem}
+.profile-status{display:inline-flex;align-items:center;gap:.5rem;background:rgba(16,185,129,.2);border:2px solid var(--green);color:var(--green);padding:.5rem 1rem;border-radius:20px;font-weight:600;font-size:.9rem;margin-bottom:1rem}
+.profile-bio{color:var(--gray);line-height:1.6;margin-bottom:1.5rem}
+.profile-meta{display:flex;gap:1rem;justify-content:center;margin-bottom:1rem;flex-wrap:wrap}
+.meta-item{color:var(--gray);font-size:.9rem}
+.profile-actions{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.action-btn{width:60px;height:60px;border-radius:50%;border:2px solid var(--border);background:var(--bg-card);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;font-size:1.5rem;color:var(--text);text-decoration:none}
+.action-btn:hover{transform:scale(1.1);border-color:var(--blue);background:var(--blue);color:#fff}
+.action-btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.profile-social{display:flex;gap:1rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap}
+.social-btn{padding:.75rem 1.5rem;border-radius:25px;border:2px solid var(--border);background:var(--bg-card);display:flex;align-items:center;gap:.5rem;cursor:pointer;transition:all .3s;color:var(--text);text-decoration:none;font-weight:600}
+.social-btn:hover{transform:translateY(-2px);border-color:var(--blue)}
+.social-btn.tiktok:hover{border-color:#000;background:#000}
+.social-btn.youtube:hover{border-color:#ff0000;background:#ff0000;color:#fff}
+.social-btn.instagram:hover{border-color:#e1306c;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff}
+.social-btn.twitch:hover{border-color:#9146ff;background:#9146ff;color:#fff}
+
+/* Content Grid */
+.profile-content-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:1.5rem}
+.content-thumb{aspect-ratio:1;border-radius:10px;overflow:hidden;cursor:pointer;position:relative;background:linear-gradient(135deg,#4267f5,#1d9bf0)}
+.content-thumb img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.content-thumb:hover img{transform:scale(1.1)}
+.content-thumb-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .3s}
+.content-thumb:hover .content-thumb-overlay{opacity:1}
+.thumb-icon{font-size:2rem;color:#fff}
+
+/* Subscription Card (Following/Creator Card) */
+.subscription-card{background:var(--bg-card);border:2px solid var(--border);border-radius:20px;overflow:hidden;transition:all .3s;cursor:pointer}
+.subscription-card:hover{transform:translateY(-5px);box-shadow:0 20px 40px rgba(66,103,245,.3);border-color:var(--blue)}
+.subscription-cover{width:100%;height:200px;position:relative;overflow:hidden;background:linear-gradient(135deg,#4267f5,#1d9bf0)}
+.subscription-cover img{width:100%;height:100%;object-fit:cover}
+.subscription-status{position:absolute;top:1rem;right:1rem;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);padding:.5rem 1rem;border-radius:20px;color:#fff;font-weight:600;font-size:.85rem}
+.subscription-body{padding:1.5rem;position:relative;margin-top:-40px}
+.subscription-avatar-wrapper{width:80px;height:80px;margin:0 auto 1rem;position:relative}
+.subscription-avatar{width:80px;height:80px;border-radius:50%;border:4px solid var(--bg-card);overflow:hidden;background:linear-gradient(135deg,#4267f5,#1d9bf0)}
+.subscription-avatar img{width:100%;height:100%;object-fit:cover}
+.subscription-info{text-align:center;margin-bottom:1rem}
+.subscription-username{font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:.25rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.subscription-handle{color:var(--gray);font-size:.9rem;margin-bottom:.5rem}
+.subscription-actions{display:flex;gap:.75rem;margin-bottom:1rem}
+.subscription-btn{flex:1;padding:.75rem 1rem;border-radius:10px;border:none;font-weight:600;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:.5rem;text-decoration:none}
+.subscription-btn.message{background:rgba(66,103,245,.1);border:2px solid var(--blue);color:var(--blue)}
+.subscription-btn.tip{background:rgba(251,191,36,.1);border:2px solid var(--orange);color:var(--orange)}
+.subscription-btn:hover{transform:translateY(-2px)}
+.subscription-badge{background:rgba(66,103,245,.1);border:2px solid var(--blue);color:var(--blue);padding:.75rem 1rem;border-radius:10px;text-align:center;font-weight:700;font-size:.9rem}
+.subscription-badge.free{background:rgba(16,185,129,.1);border-color:var(--green);color:var(--green)}
+.subscription-badge.premium{background:rgba(251,191,36,.1);border-color:var(--orange);color:var(--orange)}
+
+/* User List Item */
+.user-list-item{background:var(--bg-card);border:2px solid var(--border);border-radius:15px;padding:1rem;display:flex;align-items:center;gap:1rem;transition:all .3s;margin-bottom:1rem;cursor:pointer}
+.user-list-item:hover{transform:translateX(5px);border-color:var(--blue)}
+.user-list-avatar{width:60px;height:60px;border-radius:50%;overflow:hidden;position:relative;flex-shrink:0;background:linear-gradient(135deg,#4267f5,#1d9bf0)}
+.user-list-avatar img{width:100%;height:100%;object-fit:cover}
+.user-list-info{flex:1;min-width:0}
+.user-list-username{font-weight:700;color:var(--text);margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem}
+.user-list-meta{color:var(--gray);font-size:.85rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.user-list-actions{display:flex;gap:.5rem;flex-shrink:0}
+.user-list-btn{padding:.5rem 1rem;border-radius:8px;border:2px solid var(--border);background:var(--bg-card);color:var(--text);font-weight:600;font-size:.85rem;cursor:pointer;transition:all .3s;text-decoration:none}
+.user-list-btn:hover{border-color:var(--blue);background:var(--blue);color:#fff}
+
+/* Responsive */
+@media(max-width:768px){.profile-stats-bar{gap:.75rem;padding:0 .5rem}.stat-badge{padding:.4rem .8rem;font-size:.8rem}.profile-main{padding:0 1rem 1.5rem}.profile-avatar-wrapper,.profile-avatar{width:100px;height:100px}.profile-username{font-size:1.5rem}.profile-actions{gap:.5rem}.action-btn{width:50px;height:50px;font-size:1.2rem}.profile-content-grid{grid-template-columns:repeat(3,1fr);gap:.25rem}.subscription-cover{height:150px}.user-list-item{flex-direction:column;text-align:center}.user-list-actions{width:100%}.user-list-btn{flex:1}}
+@media(max-width:480px){.profile-content-grid{grid-template-columns:repeat(2,1fr)}}

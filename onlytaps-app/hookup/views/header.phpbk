@@ -1,0 +1,839 @@
+<?php
+// Get unread messages count if user is logged in
+$unread_messages = 0;
+$unread_notifications = 0;
+$incognito_active = false;
+$user_location_set = false;
+$current_theme = 'dark';
+$profile_incomplete = false;
+
+if(isset($_SESSION['user_id'])) {
+    require_once __DIR__ . '/../config/database.php';
+    require_once __DIR__ . '/../classes/Message.php';
+    require_once __DIR__ . '/../classes/SmartNotifications.php';
+    require_once __DIR__ . '/../classes/IncognitoMode.php';
+    
+    $db_header = new Database();
+    $conn_header = $db_header->getConnection();
+    
+    try {
+        $msg_header = new Message($conn_header);
+        $unread_messages = $msg_header->getTotalUnreadCount($_SESSION['user_id']);
+    } catch(Exception $e) {
+        $unread_messages = 0;
+    }
+    
+    try {
+        $notif_header = new SmartNotifications($conn_header);
+        $unread_notifications = $notif_header->getUnreadCount($_SESSION['user_id']);
+    } catch(Exception $e) {
+        $unread_notifications = 0;
+    }
+    
+    try {
+        $incognito_header = new IncognitoMode($conn_header);
+        $incognito_active = $incognito_header->isActive($_SESSION['user_id']);
+    } catch(Exception $e) {
+        $incognito_active = false;
+    }
+    
+    // Check what columns exist
+    try {
+        $columns_query = "SHOW COLUMNS FROM users";
+        $columns_stmt = $conn_header->query($columns_query);
+        $existing_columns = [];
+        while($col = $columns_stmt->fetch(PDO::FETCH_ASSOC)) {
+            $existing_columns[] = $col['Field'];
+        }
+        
+        // Build dynamic query based on existing columns
+        $select_fields = ['id', 'username', 'email', 'created_at'];
+        
+        if(in_array('current_latitude', $existing_columns)) {
+            $select_fields[] = 'current_latitude';
+        }
+        if(in_array('auto_location', $existing_columns)) {
+            $select_fields[] = 'auto_location';
+        }
+        if(in_array('theme_preference', $existing_columns)) {
+            $select_fields[] = 'theme_preference';
+        }
+        if(in_array('age', $existing_columns)) {
+            $select_fields[] = 'age';
+        }
+        if(in_array('gender', $existing_columns)) {
+            $select_fields[] = 'gender';
+        }
+        if(in_array('location', $existing_columns)) {
+            $select_fields[] = 'location';
+        }
+        if(in_array('bio', $existing_columns)) {
+            $select_fields[] = 'bio';
+        }
+        if(in_array('is_premium', $existing_columns)) {
+            $select_fields[] = 'is_premium';
+        }
+        
+        $query = "SELECT " . implode(', ', $select_fields) . " FROM users WHERE id = :user_id LIMIT 1";
+        $stmt = $conn_header->prepare($query);
+        $stmt->bindParam(':user_id', $_SESSION['user_id']);
+        $stmt->execute();
+        $user_data = $stmt->fetch();
+        
+        if($user_data) {
+            $user_location_set = isset($user_data['current_latitude']) && !empty($user_data['current_latitude']);
+            $current_theme = $user_data['theme_preference'] ?? 'dark';
+            $is_premium_user = $user_data['is_premium'] ?? false;
+            $current_username = $user_data['username'] ?? 'User';
+            
+            // Check profile completion only if columns exist
+            if(in_array('age', $existing_columns) && 
+               in_array('gender', $existing_columns) && 
+               in_array('location', $existing_columns) && 
+               in_array('bio', $existing_columns)) {
+                
+                $account_age = time() - strtotime($user_data['created_at']);
+                $is_new = $account_age < 86400;
+                
+                if($is_new) {
+                    $profile_incomplete = empty($user_data['age']) || 
+                                        empty($user_data['gender']) || 
+                                        empty($user_data['location']) || 
+                                        empty($user_data['bio']) || 
+                                        strlen($user_data['bio']) < 20;
+                }
+            }
+        }
+    } catch(PDOException $e) {
+        error_log("Header query error: " . $e->getMessage());
+        $user_location_set = false;
+        $current_theme = 'dark';
+        $profile_incomplete = false;
+        $is_premium_user = false;
+        $current_username = 'User';
+    }
+}
+
+// Get current page for active state
+$current_page = basename($_SERVER['PHP_SELF'], '.php');
+?>
+<!DOCTYPE html>
+<html lang="en" data-theme="<?php echo $current_theme; ?>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description" content="Turnpage - Local hookup classifieds. Post and browse personal ads in your area.">
+    <meta name="theme-color" content="#4267F5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Turnpage">
+    <title>Turnpage - Local Hookup Classifieds</title>
+    
+    <!-- Bootstrap 5.3.2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#4267F5',
+                            light: '#1D9BF0',
+                            dark: '#2C4FD4'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/assets/css/dark-blue-theme.css">
+    <link rel="stylesheet" href="/assets/css/light-theme.css">
+    <link rel="stylesheet" href="/assets/css/bottom-nav.css">
+    
+    <meta name="format-detection" content="telephone=no">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
+    
+    <style>
+        /* Modern Header Styles */
+        .modern-navbar {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .navbar-brand:hover {
+            transform: scale(1.05);
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            object-fit: contain;
+            box-shadow: 0 4px 12px rgba(66, 103, 245, 0.3);
+        }
+
+        .brand-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4267F5, #1D9BF0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .navbar-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            color: var(--text-gray);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-blue);
+            background: rgba(66, 103, 245, 0.1);
+        }
+
+        .nav-link.active {
+            color: var(--primary-blue);
+            background: rgba(66, 103, 245, 0.15);
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -0.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background: linear-gradient(90deg, #4267F5, #1D9BF0);
+            border-radius: 3px;
+        }
+
+        .badge-notification {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            min-width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: white;
+            padding: 0 6px;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+            animation: pulse-notification 2s infinite;
+        }
+
+        @keyframes pulse-notification {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Modern Dropdown */
+        .dropdown-modern {
+            position: relative;
+        }
+
+        .dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+            background: rgba(66, 103, 245, 0.1);
+            border: 2px solid rgba(66, 103, 245, 0.2);
+            color: var(--text-white);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .dropdown-toggle:hover {
+            border-color: var(--primary-blue);
+            background: rgba(66, 103, 245, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4267F5, #1D9BF0);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+        }
+
+        .premium-badge {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+
+        .dropdown-menu-modern {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            min-width: 280px;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .dropdown-modern:hover .dropdown-menu-modern,
+        .dropdown-menu-modern:hover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-header {
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, #4267F5, #1D9BF0);
+            color: white;
+        }
+
+        .dropdown-header-title {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .dropdown-header-subtitle {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .dropdown-section {
+            padding: 0.5rem;
+        }
+
+        .dropdown-section-title {
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-gray);
+            letter-spacing: 0.5px;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-radius: 10px;
+            color: var(--text-white);
+            text-decoration: none;
+            transition: all 0.2s;
+            margin: 0.25rem;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(66, 103, 245, 0.1);
+            color: var(--primary-blue);
+            transform: translateX(4px);
+        }
+
+        .dropdown-item i {
+            width: 24px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .dropdown-divider {
+            height: 2px;
+            background: var(--border-color);
+            margin: 0.5rem 0;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(66, 103, 245, 0.1);
+            border: 2px solid rgba(66, 103, 245, 0.2);
+            color: var(--text-white);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .mobile-menu-toggle:hover {
+            background: rgba(66, 103, 245, 0.2);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .quick-action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(66, 103, 245, 0.1);
+            border: 2px solid rgba(66, 103, 245, 0.2);
+            color: var(--text-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .quick-action-btn:hover {
+            background: rgba(66, 103, 245, 0.2);
+            border-color: var(--primary-blue);
+            transform: translateY(-2px);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .navbar-menu {
+                display: none;
+                position: fixed;
+                top: 70px;
+                left: 0;
+                right: 0;
+                background: var(--card-bg);
+                border-top: 2px solid var(--border-color);
+                padding: 1rem;
+                flex-direction: column;
+                align-items: stretch;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            }
+
+            .navbar-menu.active {
+                display: flex;
+            }
+
+            .mobile-menu-toggle {
+                display: flex;
+            }
+
+            .nav-link {
+                justify-content: flex-start;
+            }
+
+            .dropdown-menu-modern {
+                position: static;
+                opacity: 1;
+                visibility: visible;
+                transform: none;
+                margin-top: 0.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar-container {
+                padding: 0.75rem 1rem;
+            }
+
+            .brand-text {
+                font-size: 1.25rem;
+            }
+
+            .brand-logo {
+                width: 36px;
+                height: 36px;
+            }
+
+            .quick-actions {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="<?php echo isset($_SESSION['user_id']) ? 'has-bottom-nav' : ''; ?>">
+    
+    <!-- Modern Navbar -->
+    <nav class="modern-navbar">
+        <div class="navbar-container">
+            
+            <!-- Brand -->
+            <a href="<?php echo isset($_SESSION['current_city']) ? '/city.php?location=' . $_SESSION['current_city'] : '/choose-location.php'; ?>" class="navbar-brand">
+                <img src="/logo.png" alt="Turnpage" class="brand-logo">
+                <span class="brand-text">Turnpage</span>
+            </a>
+
+            <!-- Desktop Menu -->
+            <div class="navbar-menu" id="navbarMenu">
+                <?php if(isset($_SESSION['user_id'])): ?>
+                    
+                    <!-- Main Navigation -->
+                    <div class="nav-item">
+                        <a href="/forum.php" class="nav-link <?php echo $current_page == 'forum' ? 'active' : ''; ?>">
+                            <i class="bi bi-chat-square-text-fill"></i>
+                            <span>Forum</span>
+                        </a>
+                    </div>
+
+                    <div class="nav-item">
+                        <a href="/nearby-users.php" class="nav-link <?php echo $current_page == 'nearby-users' ? 'active' : ''; ?>">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            <span>Nearby</span>
+                            <?php if(!$user_location_set): ?>
+                            <span class="badge-notification">!</span>
+                            <?php endif; ?>
+                        </a>
+                    </div>
+
+                    <div class="nav-item">
+                        <a href="/bitcoin-wallet.php" class="nav-link <?php echo $current_page == 'bitcoin-wallet' ? 'active' : ''; ?>">
+                            <i class="bi bi-currency-bitcoin"></i>
+                            <span>Wallet</span>
+                        </a>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="quick-actions">
+                        <a href="/messages-chat-simple.php" class="quick-action-btn" title="Messages">
+                            <i class="bi bi-chat-dots-fill"></i>
+                            <?php if($unread_messages > 0): ?>
+                            <span class="badge-notification"><?php echo $unread_messages; ?></span>
+                            <?php endif; ?>
+                        </a>
+
+                        <a href="/notifications.php" class="quick-action-btn" title="Notifications">
+                            <i class="bi bi-bell-fill"></i>
+                            <?php if($unread_notifications > 0): ?>
+                            <span class="badge-notification"><?php echo $unread_notifications; ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </div>
+
+                    <!-- User Dropdown -->
+                    <div class="dropdown-modern">
+                        <div class="dropdown-toggle">
+                            <div class="user-avatar">
+                                <?php echo strtoupper(substr($current_username ?? 'U', 0, 1)); ?>
+                            </div>
+                            <span><?php echo htmlspecialchars($current_username ?? 'User'); ?></span>
+                            <?php if($is_premium_user ?? false): ?>
+                            <span class="premium-badge">PRO</span>
+                            <?php endif; ?>
+                            <i class="bi bi-chevron-down"></i>
+                        </div>
+
+                        <div class="dropdown-menu-modern">
+                            <!-- Header -->
+                            <div class="dropdown-header">
+                                <div class="dropdown-header-title">
+                                    <?php echo htmlspecialchars($current_username ?? 'User'); ?>
+                                </div>
+                                <div class="dropdown-header-subtitle">
+                                    <?php echo $is_premium_user ? '⭐ Premium Member' : 'Free Member'; ?>
+                                </div>
+                            </div>
+
+                            <!-- Profile Section -->
+                            <div class="dropdown-section">
+                                <div class="dropdown-section-title">Profile</div>
+                                <a href="/profile.php?id=<?php echo $_SESSION['user_id']; ?>" class="dropdown-item">
+                                    <i class="bi bi-person-circle"></i>
+                                    <span>My Profile</span>
+                                </a>
+                                <a href="/my-listings.php" class="dropdown-item">
+                                    <i class="bi bi-file-text"></i>
+                                    <span>My Ads</span>
+                                </a>
+                                <a href="/favorites.php" class="dropdown-item">
+                                    <i class="bi bi-star-fill"></i>
+                                    <span>Favorites</span>
+                                </a>
+                                <a href="/my-forum-activity.php" class="dropdown-item">
+                                    <i class="bi bi-chat-left-dots"></i>
+                                    <span>Forum Activity</span>
+                                </a>
+                            </div>
+
+                            <div class="dropdown-divider"></div>
+
+                            <!-- Settings Section -->
+                            <div class="dropdown-section">
+                                <div class="dropdown-section-title">Settings</div>
+                                <a href="/settings.php" class="dropdown-item">
+                                    <i class="bi bi-gear-fill"></i>
+                                    <span>Account Settings</span>
+                                </a>
+                                <a href="/location-settings.php" class="dropdown-item">
+                                    <i class="bi bi-geo-alt-fill"></i>
+                                    <span>Location Settings</span>
+                                </a>
+                                <a href="/privacy-settings.php" class="dropdown-item">
+                                    <i class="bi bi-shield-lock-fill"></i>
+                                    <span>Privacy & Security</span>
+                                </a>
+                            </div>
+
+                            <div class="dropdown-divider"></div>
+
+                            <!-- Premium Section -->
+                            <?php if(!$is_premium_user): ?>
+                            <div class="dropdown-section">
+                                <a href="/subscription-bitcoin.php" class="dropdown-item" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1)); color: #fbbf24;">
+                                    <i class="bi bi-gem"></i>
+                                    <span>Upgrade to Premium</span>
+                                </a>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <?php endif; ?>
+
+                            <!-- Logout -->
+                            <div class="dropdown-section">
+                                <a href="/logout.php" class="dropdown-item" style="color: var(--danger-red);">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    <span>Logout</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                <?php else: ?>
+                    
+                    <!-- Guest Navigation -->
+                    <div class="nav-item">
+                        <a href="/about.php" class="nav-link">About</a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/forum.php" class="nav-link">Forum</a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/membership.php" class="nav-link">
+                            <i class="bi bi-gem"></i>
+                            <span>Premium</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/login.php" class="nav-link">Login</a>
+                    </div>
+                    <a href="/register.php" class="btn btn-primary">
+                        Sign Up Free
+                    </a>
+
+                <?php endif; ?>
+            </div>
+
+            <!-- Mobile Menu Toggle -->
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <i class="bi bi-list" style="font-size: 1.5rem;"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Alert Banners -->
+    <?php if($incognito_active && isset($_SESSION['user_id'])): ?>
+    <div class="alert alert-info text-center mb-0 rounded-0 d-flex align-items-center justify-content-center gap-2" style="padding: 0.75rem;">
+        <i class="bi bi-incognito"></i>
+        <strong>Incognito Mode Active</strong>
+        <span>•</span>
+        <span>Your profile is hidden</span>
+    </div>
+    <?php endif; ?>
+    
+    <?php if($profile_incomplete && isset($_SESSION['user_id']) && $current_page != 'profile-setup'): ?>
+    <div class="alert alert-warning text-center mb-0 rounded-0 d-flex align-items-center justify-content-center gap-2" style="padding: 0.75rem;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <strong>Complete your profile</strong>
+        <span>•</span>
+        <a href="/profile-setup.php" class="alert-link fw-bold">Complete Now</a>
+    </div>
+    <?php endif; ?>
+    
+    <?php if(isset($_SESSION['user_id']) && !$user_location_set && !$profile_incomplete): ?>
+    <div class="alert alert-primary text-center mb-0 rounded-0 d-flex align-items-center justify-content-center gap-2 flex-wrap" style="padding: 0.75rem;">
+        <i class="bi bi-geo-alt-fill"></i>
+        <span>Enable location to discover nearby users</span>
+        <button class="btn btn-light btn-sm" onclick="enableLocationFromBanner()">
+            Enable Location
+        </button>
+    </div>
+    <?php endif; ?>
+    
+      <!-- Bottom Navigation Bar (Mobile Only) -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-container">
+            <a href="<?php echo isset($_SESSION['current_city']) ? '/city.php?location=' . $_SESSION['current_city'] : '/choose-location.php'; ?>" 
+               class="bottom-nav-item <?php echo in_array($current_page, ['index', 'city', 'choose-location']) ? 'active' : ''; ?>">
+                <div class="bottom-nav-icon">🏠</div>
+                <span class="bottom-nav-label">Home</span>
+            </a>
+            
+            <a href="/marketplace.php" class="bottom-nav-item <?php echo $current_page == 'marketplace' ? 'active' : ''; ?>">
+                <div class="bottom-nav-icon">🛍️</div>
+                <span class="bottom-nav-label">Market</span>
+            </a>
+            
+            <a href="/create-listing.php" class="bottom-nav-item <?php echo $current_page == 'create-listing' ? 'active' : ''; ?>">
+                <div class="bottom-nav-icon">➕</div>
+                <span class="bottom-nav-label">Post</span>
+            </a>
+            
+            <a href="/messages.php" class="bottom-nav-item <?php echo $current_page == 'messages' ? 'active' : ''; ?>">
+                <div class="bottom-nav-icon">💬</div>
+                <span class="bottom-nav-label">Messages</span>
+                <?php if($unread_messages > 0): ?>
+                <span class="bottom-nav-badge"><?php echo $unread_messages; ?></span>
+                <?php endif; ?>
+            </a>
+            
+            <a href="/profile.php?id=<?php echo $_SESSION['user_id']; ?>" class="bottom-nav-item <?php echo $current_page == 'profile' ? 'active' : ''; ?>">
+                <div class="bottom-nav-icon">👤</div>
+                <span class="bottom-nav-label">Profile</span>
+            </a>
+        </div>
+    </nav>
+    
+    <main>	
+ 
+    <!-- Theme Toggle -->
+    <?php 
+    $db = $conn_header ?? null;
+    include __DIR__ . '/../components/theme-toggle.php'; 
+    endif; ?>
+    
+
+<!-- Bootstrap 5.3.2 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+<script>
+// Mobile menu toggle
+const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+const navbarMenu = document.getElementById('navbarMenu');
+
+if(mobileMenuToggle && navbarMenu) {
+    mobileMenuToggle.addEventListener('click', function() {
+        navbarMenu.classList.toggle('active');
+        const icon = this.querySelector('i');
+        icon.classList.toggle('bi-list');
+        icon.classList.toggle('bi-x-lg');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', function(e) {
+        if(!mobileMenuToggle.contains(e.target) && !navbarMenu.contains(e.target)) {
+            navbarMenu.classList.remove('active');
+            const icon = mobileMenuToggle.querySelector('i');
+            icon.classList.remove('bi-x-lg');
+            icon.classList.add('bi-list');
+        }
+    });
+}
+
+// Enable location
+function enableLocationFromBanner() {
+    if(!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            updateLocationSilent(position.coords.latitude, position.coords.longitude, () => {
+                location.reload();
+            });
+        },
+        (error) => {
+            console.error('Geolocation error:', error);
+            alert('Unable to get your location. Please enable location access.');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+function updateLocationSilent(latitude, longitude, callback) {
+    const formData = new FormData();
+    formData.append('action', 'update_location');
+    formData.append('latitude', latitude);
+    formData.append('longitude', longitude);
+    formData.append('auto_detected', 'true');
+    
+    fetch('/api/location.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success && callback) {
+            callback();
+        }
+    })
+    .catch(error => {
+        console.error('Error updating location:', error);
+    });
+}
+</script>

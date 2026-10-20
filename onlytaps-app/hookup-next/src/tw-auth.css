@@ -1,0 +1,38 @@
+@import "./app/globals.css";
+
+@source "../../hookup/views/auth_header.php";
+@source "../../hookup/views/auth_footer.php";
+@source "../../hookup/login.php";
+@source "../../hookup/register.php";
+
+@layer components {
+  .auth-wrap { @apply mx-auto w-full max-w-md px-5 pb-6 pt-10; }
+  .auth-card { @apply rounded-3xl border border-line bg-surface p-7 shadow-2xl shadow-black/40; }
+  .auth-head { @apply mb-7 text-center; }
+  .auth-logo { @apply mx-auto mb-3 size-16 rounded-2xl object-contain; }
+  .auth-head h2 { @apply text-2xl font-extrabold tracking-tight; }
+  .form-group { @apply mb-4 flex flex-col gap-1.5; }
+  .form-group label { @apply font-semibold text-white; }
+  .form-group small { @apply text-xs text-muted; }
+  .auth-row { @apply mb-6 flex items-center justify-between gap-3; }
+  .check { @apply flex items-center gap-2 text-ink; }
+  .alert-error { @apply mb-4 rounded-xl border border-danger/40 bg-danger/15 px-3.5 py-3 text-red-200; }
+  .alert-success { @apply mb-4 rounded-xl border border-ok/40 bg-ok/15 px-3.5 py-3 text-green-200; }
+  .alert-info { @apply mb-6 rounded-xl border border-brand-500/40 bg-brand-500/15 px-3.5 py-3 text-sm text-violet-100; }
+  .alert-warning { @apply mb-4 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3.5 py-3 text-sm text-amber-100; }
+  .tos-page { @apply py-8; }
+  .tos-container { @apply mx-auto max-w-3xl px-5; }
+  .tos-header { @apply mb-8 text-center; }
+  .tos-content { @apply mb-6 max-h-[70vh] overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur sm:p-10; }
+  .tos-section { @apply mb-8 border-b border-white/10 pb-8 last:mb-0 last:border-b-0 last:pb-0; }
+  .tos-section h2 { @apply mb-3 text-2xl font-bold text-violet-300; }
+  .tos-section h3 { @apply mb-2 text-lg font-semibold; }
+  .tos-section p { @apply mb-3 leading-8 text-white/70; }
+  .tos-section ul { @apply list-disc space-y-1 pl-8 leading-8 text-white/70; }
+  .warning-box { @apply my-6 rounded-2xl border border-danger/50 bg-danger/10 p-6; }
+  .warning-box h3 { @apply mb-3 text-xl font-bold text-red-300; }
+  .info-box { @apply my-5 rounded-2xl border border-brand-500/40 bg-brand-500/10 p-5; }
+  .acceptance-box { @apply rounded-2xl border border-brand-500/40 bg-white/5 p-6 text-center backdrop-blur; }
+  .checkbox-label { @apply my-4 flex cursor-pointer items-start gap-3 text-left; }
+  .checkbox-label input[type="checkbox"] { @apply mt-1 size-5 shrink-0 cursor-pointer accent-violet-500; }
+}
