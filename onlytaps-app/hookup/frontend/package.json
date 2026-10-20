@@ -1,0 +1,6 @@
+{
+  "name": "hookup-frontend",
+  "private": true,
+  "scripts": { "build": "tsc -p .", "watch": "tsc -p . --watch" },
+  "devDependencies": { "typescript": "^5.6.0" }
+}

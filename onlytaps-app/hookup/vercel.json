@@ -1,0 +1,28 @@
+{
+  "framework": "php",
+  "buildCommand": "echo 'PHP application'",
+  "outputDirectory": ".",
+  "installCommand": "composer install --no-dev",
+  "env": {
+    "DB_HOST": "@db_host",
+    "DB_NAME": "@db_name",
+    "DB_USER": "@db_user",
+    "DB_PASSWORD": "@db_password"
+  },
+  "functions": {
+    "api/**/*.php": {
+      "runtime": "php-8.2"
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
+  ]
+}

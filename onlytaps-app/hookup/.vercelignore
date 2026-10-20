@@ -1,0 +1,14 @@
+node_modules/
+.git
+.env.local
+.env
+*.lock
+.DS_Store
+latest.zip
+Turnpage.zip
+files*.zip
+steptodown.com*.mp4
+htaccess_Version1.txt
+vendor/
+uploads/*
+!uploads/.gitkeep
